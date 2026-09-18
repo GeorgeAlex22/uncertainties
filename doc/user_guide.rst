@@ -635,6 +635,58 @@ uncertainty:
 >>> print(x.std_score(0.17))
 -3.0
 
+.. index:: relative standard deviation; relative uncertainty
+
+Relative standard deviation
+===========================
+
+The read-only ``relative_std_dev`` attribute gives the **relative standard
+deviation** (relative uncertainty): ``std_dev / abs(nominal_value)``. It is a
+dimensionless fraction, not a percentage. Multiply it by 100 for a percentage.
+
+>>> measurement = ufloat(-10, 2)
+>>> measurement.relative_std_dev
+0.2
+>>> (2 * measurement).relative_std_dev
+0.2
+
+This attribute is available on both independent variables and calculated
+results. It uses the current standard deviation, including correlations and
+any later changes to the uncertainties of the underlying variables.
+
+A zero nominal value (including negative zero) gives positive infinity when
+its standard deviation is positive, or NaN when both are zero:
+
+>>> ufloat(0, 1).relative_std_dev
+inf
+>>> (measurement - measurement).relative_std_dev
+nan
+
+NaN in either the nominal value or standard deviation gives NaN, including
+when the nominal value is zero. An infinite nominal value with a finite
+standard deviation gives ``0.0``; infinite nominal value and infinite standard
+deviation give NaN. Extraction does not introduce division-by-zero or
+invalid-division warnings or exceptions.
+
+For uniform access to mixed inputs, use :func:`relative_std_dev`:
+
+>>> from uncertainties import relative_std_dev
+>>> relative_std_dev(measurement)
+0.2
+>>> relative_std_dev(3)
+0.0
+>>> relative_std_dev(0)
+0.0
+>>> relative_std_dev(float("nan"))
+0.0
+>>> relative_std_dev(ufloat(0, 0))
+nan
+
+Like :func:`std_dev`, this utility returns ``0.0`` for **every object without
+uncertainty**, including plain zero, infinity, and NaN. This fallback differs
+from the ratio calculated for a quantity with uncertainty. For elementwise
+array extraction, use :func:`uncertainties.unumpy.relative_std_devs`.
+
 .. index:: derivatives
 
 .. _derivatives:

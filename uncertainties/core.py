@@ -43,6 +43,7 @@ __all__ = [
     # Uniform access to nominal values and standard deviations:
     "nominal_value",
     "std_dev",
+    "relative_std_dev",
     # Utility functions (more are exported if NumPy is present):
     "covariance_matrix",
     # Class for testing whether an object is a number with
@@ -351,6 +352,9 @@ class AffineScalarFunc(object):
     - nominal_value, std_dev: value at the origin / nominal value, and
       standard deviation.  The standard deviation can be NaN or infinity.
 
+    - relative_std_dev: standard deviation divided by the absolute nominal
+      value, expressed as a fraction rather than a percentage.
+
     - n, s: abbreviations for nominal_value and std_dev.
 
     - error_components(): error_components()[x] is the error due to
@@ -527,6 +531,21 @@ class AffineScalarFunc(object):
 
     # Abbreviation (for formulas, etc.):
     s = std_dev
+
+    @property
+    def relative_std_dev(self):
+        """
+        Standard deviation divided by the absolute nominal value.
+
+        This read-only value is a fraction, not a percentage, and depends
+        on the current standard deviations of the underlying variables.
+        A zero nominal value gives positive infinity for a positive
+        standard deviation, or NaN when both are zero. NaN inputs give NaN.
+        """
+        std_dev = self.std_dev
+        if self.nominal_value == 0:
+            return float("inf") if std_dev > 0 else float("nan")
+        return std_dev / abs(self.nominal_value)
 
     def __repr__(self):
         # Not putting spaces around "+/-" helps with arrays of
@@ -895,6 +914,24 @@ def std_dev(x):
 
     if isinstance(x, AffineScalarFunc):
         return x.std_dev
+    else:
+        return 0.0
+
+
+def relative_std_dev(x):
+    """
+    Return the relative standard deviation of x if it is a quantity with
+    uncertainty (i.e., an AffineScalarFunc object); otherwise, return 0.0.
+
+    The result is a fraction, not a percentage. For uncertain quantities,
+    a zero nominal value gives positive infinity for a positive standard
+    deviation, or NaN when both are zero. NaN inputs give NaN.
+
+    Like std_dev(), this utility returns 0.0 for all other objects,
+    including plain zero, infinity, and NaN.
+    """
+    if isinstance(x, AffineScalarFunc):
+        return x.relative_std_dev
     else:
         return 0.0
 

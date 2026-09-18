@@ -31,6 +31,7 @@ __all__ = [
     # Utilities:
     "nominal_values",
     "std_devs",
+    "relative_std_devs",
     # Classes:
     "matrix",
 ]
@@ -70,6 +71,9 @@ to_std_devs = numpy.vectorize(
         " contained in a NumPy array, or zero for other objects."
     ),
 )
+
+
+to_relative_std_devs = numpy.vectorize(uncert_core.relative_std_dev, otypes=[float])
 
 
 def unumpy_to_numpy_matrix(arr):
@@ -120,6 +124,24 @@ def std_devs(arr):
     """
 
     return unumpy_to_numpy_matrix(to_std_devs(arr))
+
+
+def relative_std_devs(arr):
+    """
+    Return the relative standard deviations of the numbers in array-like arr.
+
+    Each result is a fraction, not a percentage: the standard deviation
+    divided by the absolute nominal value. For uncertain elements, a zero
+    nominal value gives positive infinity for a positive standard deviation,
+    or NaN when both are zero. NaN inputs give NaN.
+
+    Elements without uncertainty give 0.0, including plain zero, infinity,
+    and NaN. The result has floating-point dtype and the input shape.
+    An unumpy.matrix input gives a numpy.matrix result, like std_devs().
+    """
+    # NumPy detects the floating-point invalid flag from Python's inf / inf.
+    with numpy.errstate(invalid="ignore"):
+        return unumpy_to_numpy_matrix(to_relative_std_devs(arr))
 
 
 ###############################################################################

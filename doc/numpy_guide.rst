@@ -129,6 +129,27 @@ array([1., 2.])
 >>> unumpy.std_devs(mat)
 matrix([[0.1  , 0.002]])
 
+Relative standard deviations (relative uncertainties) can also be extracted:
+
+>>> unumpy.relative_std_devs(arr)
+array([0.1  , 0.001])
+>>> values = [ufloat(-10, 2), ufloat(0, 1), ufloat(0, 0), 0, float("nan")]
+>>> unumpy.relative_std_devs(values).tolist()
+[0.2, inf, nan, 0.0, 0.0]
+
+Each uncertain element gives its standard deviation divided by its absolute
+nominal value, as a fraction rather than a percentage. Zero nominal values
+with positive uncertainty give positive infinity; zero nominal value and
+zero uncertainty give NaN. NaN inputs on uncertain elements give NaN.
+Infinite nominal values with finite standard deviations give zero, while
+infinite nominal values with infinite standard deviations give NaN.
+
+Like the scalar :func:`uncertainties.relative_std_dev` utility, elements
+without uncertainty give ``0.0``, even for plain zero, infinity, or NaN.
+The result has floating-point dtype and preserves the input shape, including
+empty arrays. Array-like inputs are accepted; matrix conversion follows
+:func:`unumpy.std_devs`.
+
 
 .. index:: mathematical operation; on an array of numbers
 

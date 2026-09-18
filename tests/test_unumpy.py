@@ -5,6 +5,8 @@ except ImportError:
 
     sys.exit()  # There is no reason to test the interface to NumPy
 
+import pytest
+
 import uncertainties
 import uncertainties.core as uncert_core
 from uncertainties import ufloat, unumpy
@@ -289,6 +291,55 @@ def test_component_extraction():
     assert numpy.all(unumpy.nominal_values(mat) == [1, 2])
     assert numpy.all(unumpy.std_devs(mat) == [0.1, 0.2])
     assert type(unumpy.nominal_values(mat)) == numpy.matrix
+
+
+@pytest.mark.filterwarnings("error::RuntimeWarning")
+@pytest.mark.parametrize("container", [list, numpy.array, numpy.matrix, unumpy.matrix])
+def test_relative_std_devs(container):
+    values = [
+        [ufloat(10, 2), ufloat(-10, 2), ufloat(0, 1), ufloat(-0.0, 0)],
+        [
+            ufloat(0, numpy.nan),
+            ufloat(numpy.inf, 1),
+            ufloat(numpy.inf, numpy.inf),
+            ufloat(numpy.nan, 1),
+        ],
+        [0, numpy.nan, numpy.inf, None],
+    ]
+    expected = [
+        [0.2, 0.2, numpy.inf, numpy.nan],
+        [numpy.nan, 0.0, numpy.nan, numpy.nan],
+        [0.0, 0.0, 0.0, 0.0],
+    ]
+    with numpy.errstate(divide="raise", invalid="raise"):
+        result = unumpy.relative_std_devs(container(values))
+        assert numpy.geterr()["invalid"] == "raise"
+    numpy.testing.assert_allclose(result, expected, equal_nan=True)
+    numpy.testing.assert_allclose(
+        result,
+        [[uncertainties.relative_std_dev(value) for value in row] for row in values],
+        equal_nan=True,
+    )
+    assert result.shape == (3, 4)
+    assert result.dtype == numpy.dtype(float)
+    assert type(result) is (
+        numpy.matrix if container in (numpy.matrix, unumpy.matrix) else numpy.ndarray
+    )
+    assert "relative_std_devs" in unumpy.__all__
+
+
+@pytest.mark.parametrize("shape", [(0,), (2, 0, 3)])
+def test_relative_std_devs_empty(shape):
+    result = unumpy.relative_std_devs(numpy.empty(shape, dtype=object))
+    assert result.shape == shape
+    assert result.dtype == numpy.dtype(float)
+
+
+def test_relative_std_devs_scalar():
+    result = unumpy.relative_std_devs(ufloat(-10, 2))
+    assert result.shape == ()
+    assert result.dtype == numpy.dtype(float)
+    assert result == 0.2
 
 
 def test_array_comparisons():

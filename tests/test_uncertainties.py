@@ -4,6 +4,8 @@ import inspect
 import math
 from pathlib import Path
 import random  # noqa
+import subprocess
+import sys
 
 import pytest
 
@@ -15,6 +17,7 @@ from uncertainties.core import (
     deprecated_methods,
 )
 from uncertainties import (
+    relative_std_dev,
     umath,
     correlated_values,
     correlated_values_norm,
@@ -535,6 +538,91 @@ def test_basic_access_to_data():
         x.std_score(1)
     except ValueError:
         pass  # Normal behavior
+
+
+@pytest.mark.filterwarnings("error::RuntimeWarning")
+@pytest.mark.parametrize("derived", [False, True])
+@pytest.mark.parametrize(
+    "nominal, std, expected",
+    [
+        (10, 2, 0.2),
+        (-10, 2, 0.2),
+        (10, 0, 0.0),
+        (-10, 0, 0.0),
+        (0.0, 2, math.inf),
+        (-0.0, 2, math.inf),
+        (0.0, 0, math.nan),
+        (-0.0, 0, math.nan),
+        (0.0, math.inf, math.inf),
+        (-0.0, math.inf, math.inf),
+        (0.0, math.nan, math.nan),
+        (-0.0, math.nan, math.nan),
+        (10, math.inf, math.inf),
+        (-10, math.inf, math.inf),
+        (10, math.nan, math.nan),
+        (math.inf, 2, 0.0),
+        (-math.inf, 2, 0.0),
+        (math.inf, 0, 0.0),
+        (math.inf, math.inf, math.nan),
+        (-math.inf, math.inf, math.nan),
+        (math.inf, math.nan, math.nan),
+        (math.nan, 2, math.nan),
+        (math.nan, 0, math.nan),
+        (math.nan, math.inf, math.nan),
+        (math.nan, math.nan, math.nan),
+    ],
+)
+def test_relative_std_dev(nominal, std, expected, derived):
+    x = ufloat(nominal, std)
+    if derived:
+        x = x + 0
+    result = x.relative_std_dev
+    assert isinstance(result, float)
+    assert nan_close(result, expected)
+    assert nan_close(relative_std_dev(x), expected)
+
+
+@pytest.mark.parametrize(
+    "value", [3, -3, 0, -0.0, math.inf, -math.inf, math.nan, None, [], [1], "text", 1j]
+)
+def test_relative_std_dev_fallback(value):
+    result = relative_std_dev(value)
+    assert isinstance(result, float)
+    assert result == 0.0
+
+
+def test_relative_std_dev_updates_and_correlations():
+    x = ufloat(10, 2)
+    y = 2 * x + 20
+    assert y.relative_std_dev == 0.1
+    assert math.isnan(relative_std_dev(y - 2 * x - 20))
+
+    x.std_dev = 4
+    assert x.relative_std_dev == 0.4
+    assert y.relative_std_dev == 0.2
+    assert relative_std_dev(y) == 0.2
+
+    for value in (x, y):
+        with pytest.raises(AttributeError):
+            value.relative_std_dev = 0.5
+
+
+def test_relative_std_dev_without_numpy():
+    subprocess.run(
+        [
+            sys.executable,
+            "-S",
+            "-c",
+            """
+import importlib.util
+assert importlib.util.find_spec("numpy") is None
+from uncertainties import relative_std_dev, ufloat
+assert relative_std_dev(ufloat(-10, 2)) == 0.2
+""",
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+    )
 
 
 def test_correlations():

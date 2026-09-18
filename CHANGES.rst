@@ -1,6 +1,15 @@
 Change Log
 ===================
 
+Unreleased
+-----------------------
+
+- Add read-only ``relative_std_dev`` on uncertain scalars, the uniform
+  ``relative_std_dev()`` utility, and ``unumpy.relative_std_devs()`` for arrays.
+  Results are fractions, not percentages. Uncertain zero nominal values give
+  positive infinity for positive uncertainty and NaN when both values are zero;
+  NaN inputs propagate. As with ``std_dev()``, non-uncertain inputs give zero.
+
 3.2.4   2026-January-9
 -----------------------
 
